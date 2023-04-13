@@ -1,8 +1,8 @@
 from SpriteFiles.ChessPieces.chessPiece import ChessPiece
 import pygame
-pawnTexture = "Textures/Pawn.png"
-pawnHitTexture = "Textures/PawnHit.png"
-pawnDead = "Textures/PawnDead.png"
+pawnTexture = "Textures/Pieces/Pawn.png"
+pawnHitTexture = "Textures/Pieces/PawnHit.png"
+pawnDead = "Textures/Pieces/PawnDead.png"
 class Pawn(ChessPiece):
     def __init__(self):
         #initializing the supersclass's constructors
@@ -11,6 +11,7 @@ class Pawn(ChessPiece):
         #initializing the pawn's attributes
         self.pieceType = "PAWN"
         self.health = 2  
+        self.timeHit = 0
         self.enemyNear = 0
         self.enemyNearTimer = 0
         self.hasImmunity = False
