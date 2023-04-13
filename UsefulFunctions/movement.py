@@ -84,11 +84,12 @@ class Movement:
             return True
         return False
     
-    def findOpenSpot(self, mapOfPieces):
+    def findOpenSpot(self, mapOfPieces, pawn):
         randX = random.randint(0,7)
         randY = random.randint(0,7)
+        pawnPoss = (pawn.findChessBoardCordX(), pawn.findChessBoardCordY())
 
-        while(mapOfPieces[randY][randX] == "X"):
+        while(mapOfPieces[randY][randX] == "X" or math.dist((randX, randY), (pawnPoss[0], pawnPoss[1])) < 3):
             randX = random.randint(0,7)
             randY = random.randint(0,7)
         return (randX, randY)
