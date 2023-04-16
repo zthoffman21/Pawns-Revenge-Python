@@ -9,6 +9,7 @@ from SpriteFiles.ChessPieces.enemy import Enemy
 from UsefulFunctions.boardInfo import BoardInfo
 from gameLoop.hearts import Hearts
 from gameLoop.roundNumber import RoundNumber
+import random
 
 class GameLoop():
 
@@ -111,6 +112,61 @@ class GameLoop():
                 timingOfLevel.append(time)
             index += 1
 
+    def drawEverything(self, screen, pawn, hearts, roundNumber, waveLevel, allThrowableItemsArr, hasItem, info, allChessPiecesArr, isShooting, powerBar, shootingStartTime, boardInfo):     
+        #sorts the pieces by ycord so they get displayed from back to front
+        allChessPiecesArr.sort(key=boardInfo.getYCord)
+
+        # initializing colors
+        lightBrown = (166, 126, 61)
+        darkBrown = (37, 24, 0)
+
+        #draw background and board to screen
+        screen.fill(darkBrown)
+        pygame.draw.rect(screen, lightBrown, pygame.Rect(20, 95, 690, 548))
+        screen.blit(pygame.image.load("Textures/ChessBoardSVS.png").convert_alpha(), (25,100))
+
+        #draw gameloop ui to screen
+        hearts.draw(screen, pawn.health)
+        roundNumber.draw(screen, waveLevel+1)
+
+        #drawing throwable items to screen except the one the player is holding
+        for item in allThrowableItemsArr:
+            if not hasItem or item is not allThrowableItemsArr[info[1]]:
+                item.draw(screen, False)
+        #drawing all pieces to screen (enemies and user)
+        for piece in allChessPiecesArr:
+                piece.draw(screen, False)
+        #if the player has an item, draws it onto the screen 
+        if hasItem:
+            allThrowableItemsArr[info[1]].draw(screen, hasItem)
+        #if the player is shooting, draws the powerbar onto the screen
+        if isShooting:
+            powerBar.rect.x = pawn.rect.x + pawn.image.get_width() + 5 
+            powerBar.rect.y = pawn.rect.y
+            powerBar.draw(screen, pygame.time.get_ticks() - shootingStartTime)
+
+        #update display
+        pygame.display.flip()
+
+    def createWaveCode(self, waveNum):
+        enemies = ["N" for x in range(30)] + ["B" for x in range(30)] + ["R" for x in range(25)] + ["Q" for x in range(10)] + ["K" for x in range(5)]
+        wave = []
+
+        for x in range(int(1/75 * ((waveNum-10)**3 - waveNum**2) + 17.5)):
+            wave.append(enemies[random.randint(0,99)])
+
+        index = 0
+        l = len(wave)
+        while index < l:
+            enemiesAtOnce = random.randint(1,4)
+            while index + enemiesAtOnce >= len(wave):
+                enemiesAtOnce = random.randint(1,4)
+            time = enemiesAtOnce**2 + 5
+            wave.insert(index+enemiesAtOnce, str(time))
+            index += enemiesAtOnce + 1
+        wave.insert(0, "5")
+        return "".join(wave)
+
     def game(self, screen):
         powerBar = PowerBar()
         game = GameLoop()
@@ -118,26 +174,20 @@ class GameLoop():
         hearts = Hearts()
         roundNumber = RoundNumber()
 
-        # initializing colors
-        lightBrown = (166, 126, 61)
-        darkBrown = (37, 24, 0)
-
-
         #variable initialization
         movement = Movement()
         hasItem = False
         isShooting = False
         canThrow = False
         timeOfDeath = -4000
-        startTime = 0
-        endTime = 0
+        shootingStartTime = 0
+        shootingEndTime = 0
         currentTicks = 0
         lastTicks = 0
-        ticksPassed = 0
         lastEnemyMove = 0
         timeLastSpawned = 0
         waveLevel = 0
-        allWaves = ["3N5BN", "3NNN"]
+        info = []
         mapOfPieces = [["-","-","-","-","-","-","-","-","-","-"],
                     ["-","-","-","-","-","-","-","-","-","-"],
                     ["-","-","-","-","-","-","-","-","-","-"],
@@ -184,41 +234,52 @@ class GameLoop():
         running = True
         while running:
 
+            #creates the wave code and timing of the wave for this wave
             enimiesInLevel = []
             timingOfLevel = []
-            game.dicipherWaveCode(allWaves[waveLevel], enimiesInLevel, timingOfLevel)
+            waveCode = self.createWaveCode(waveLevel)
+            game.dicipherWaveCode(waveCode, enimiesInLevel, timingOfLevel)
+            print(waveCode)
 
+            #ends the wave when either more enemies are to come, or there are still enemies in the wave that have not been killed
             while len(allChessPiecesArr) -1 > 0 or len(enimiesInLevel) > 0:
 
+                #ends the game loop if 3 seconds have past since the pawn has died
                 if pawn.health <= 0:
                     if(pygame.time.get_ticks() - timeOfDeath) >= 3000:
                         running = False
                         break
 
+                #checks if it is time to spawn more enemies based on the time code of the wave
                 if len(timingOfLevel) > 0 and (pygame.time.get_ticks() - timeLastSpawned)/1000 >= int(timingOfLevel[0]):
+                    #spawns new enemies until it sees an "X" in the wave code
                     while len(enimiesInLevel) > 0 and enimiesInLevel[0] != "X":
                         self.addEnemy(allChessPiecesArr, movement, mapOfPieces, pawn, boardInfo, enimiesInLevel[0])
                         del enimiesInLevel[0]
+                    #prepares for next spawning
                     timeLastSpawned = pygame.time.get_ticks()
                     if len(enimiesInLevel) > 0:
                         del timingOfLevel[0]
                         del enimiesInLevel[0]
 
+                #checks if the pawn can regen health
                 if pawn.health != 2 and pygame.time.get_ticks() - pawn.timeHit >= 10000:
-                    print("regen")
                     pawn.health += 1
 
+                #checks if the pawn has lost immunity
+                if pawn.hasImmunity and pygame.time.get_ticks() - pawn.immunityStart >= 2000:
+                    pawn.hasImmunity = False
 
-                #gets the ammount of ticks that pass since last frame
-                currentTicks = pygame.time.get_ticks()
-                ticksPassed = currentTicks-lastTicks
-                lastTicks = currentTicks
-
-                if pawn.enemyNear and currentTicks - pawn.enemyNearTimer >= 500 and not pawn.hasImmunity:
+                #checks if the pawn has been next to an enemy for a half second. If so, the pawn takes damage
+                if pawn.enemyNear and pygame.time.get_ticks() - pawn.enemyNearTimer >= 500 and not pawn.hasImmunity:
                     pawn.getHit()
                     pawn.timeHit = pygame.time.get_ticks()
+
+                    #starts the pawn's immunity
                     pawn.hasImmunity = True
                     pawn.immunityStart = pygame.time.get_ticks()
+
+                    #checks if this hit has caused the pawn to die
                     if pawn.health == 0:
                         game.pieceDeath(pawn, allChessPiecesArr, allThrowableItemsArr, mapOfPieces)
                         hasItem = False
@@ -226,77 +287,66 @@ class GameLoop():
                         isShooting = False
                         timeOfDeath = pygame.time.get_ticks()
 
-                # initializing default screen
-                screen.fill(darkBrown)
-                pygame.draw.rect(screen, lightBrown, pygame.Rect(20, 95, 690, 548))
-                screen.blit(pygame.image.load("Textures/ChessBoardSVS.png").convert_alpha(), (25,100))
-                hearts.draw(screen, pawn.health)
-                roundNumber.draw(screen, waveLevel+1)
+                #draw everything to the screen
+                self.drawEverything(screen, pawn, hearts, roundNumber, waveLevel, allThrowableItemsArr, hasItem, info, allChessPiecesArr, isShooting, powerBar, shootingStartTime, boardInfo)
 
-                #drawing all the pieces
-                for item in allThrowableItemsArr:
-                    if not hasItem or item is not allThrowableItemsArr[info[1]]:
-                        item.draw(screen, False)
-
-                for piece in allChessPiecesArr:
-                        piece.draw(screen, False)
-                if hasItem:
-                    allThrowableItemsArr[info[1]].draw(screen, hasItem)
-
-                if isShooting:
-                    powerBar.rect.x = pawn.rect.x + pawn.image.get_width() + 5 
-                    powerBar.rect.y = pawn.rect.y
-                    powerBar.draw(screen, pygame.time.get_ticks() - startTime)
-
-                #update display
-                pygame.display.flip()
-
+                #moves all projectiles based on the amount of ticks that has passes since last frame
+                currentTicks = pygame.time.get_ticks()
                 if len(allProjectiles) > 0:
-                    game.moveProjectiles(ticksPassed, allProjectiles, allChessPiecesArr, allThrowableItemsArr, mapOfPieces, pawn)
+                    game.moveProjectiles(currentTicks-lastTicks, allProjectiles, allChessPiecesArr, allThrowableItemsArr, mapOfPieces, pawn)
+                lastTicks = currentTicks
                         
+                #checks for events from the player
                 for event in pygame.event.get():
+
+                    #checks if the player hits the "x" button
                     if event.type == pygame.QUIT:
                         running = False
 
-
+                    #checks if the player wants to move the pawn while their health is greater than 0. Also, it moves the item if the player is holding one and updates the map of pieces
                     if event.type == pygame.KEYDOWN and pawn.health > 0:
-                        #checks for movement input
+
+                        #move right
                         if event.key in [pygame.K_RIGHT, pygame.K_d] and movement.canMoveRight(pawn, mapOfPieces):
                             boardInfo.updateMap(pawn,'R', mapOfPieces)
                             if hasItem:
                                 allThrowableItemsArr[info[1]].rect.x += 85
                             pawn.rect.x += 85
+                        #move left
                         elif event.key in [pygame.K_LEFT, pygame.K_a] and movement.canMoveLeft(pawn, mapOfPieces):
                             boardInfo.updateMap(pawn,'L', mapOfPieces)
                             if hasItem:
                                 allThrowableItemsArr[info[1]].rect.x -= 85
                             pawn.rect.x -= 85
+                        #move up
                         elif event.key in [pygame.K_UP, pygame.K_w] and movement.canMoveUp(pawn, mapOfPieces):
                             boardInfo.updateMap(pawn,'U', mapOfPieces)
                             if hasItem:
                                 allThrowableItemsArr[info[1]].rect.y -= 64
                             pawn.rect.y -= 64
+                        #move down
                         elif event.key in [pygame.K_DOWN, pygame.K_s] and movement.canMoveDown(pawn, mapOfPieces):
                             boardInfo.updateMap(pawn,'D', mapOfPieces)
                             if hasItem:
                                 allThrowableItemsArr[info[1]].rect.y += 64
                             pawn.rect.y += 64
 
+                        #checks if there is an enemy near after the player has moved. If so, starts the timer until the player takes damage
                         pawn.enemyNear = movement.checkIfEnemyIsNear((pawn.findChessBoardCordX(),pawn.findChessBoardCordY()), mapOfPieces)
                         if pawn.enemyNear:
                             pawn.enemyNearTimer = pygame.time.get_ticks()
 
-                        #sorts the pieces by ycord so they get displayed from back to front
-                        allChessPiecesArr.sort(key=boardInfo.getYCord)
 
 
                     if event.type == pygame.MOUSEBUTTONDOWN and pawn.health > 0:
+
                         #checks if the mouse if clicked and has an item(trying to shoot the item)
                         if canThrow:
                             #if the player has an item and is not building velocity, this starts building it
                             if not isShooting:
-                                startTime = pygame.time.get_ticks()
+                                shootingStartTime = pygame.time.get_ticks()
                                 isShooting = True
+
                         #if the player clicks the mouse but does not have an item, it checks if they 
                         #can pickup an item, if so, it picks up that item
                         else:
@@ -304,40 +354,44 @@ class GameLoop():
                             if info[0]:
                                 game.pickupItem(allThrowableItemsArr, pawn, info)
                                 hasItem = True
-                        #if the mouse is not clicked and the player is shooting, it shoots the item
+
+
                     elif not pygame.mouse.get_pressed()[0]:
+                        
+                        #if the player has an item and is not pressing the mouse, the player can now throw
                         if hasItem:
                             canThrow = True
 
+                        #if the player is shooting and not is not pressing the mouse, it throws the item the player was holding
                         if isShooting:
-                            endTime = pygame.time.get_ticks()
-                            if endTime-startTime >= 800:
+                            shootingEndTime = pygame.time.get_ticks()
+                            if shootingEndTime-shootingStartTime >= 800:
                                 game.throwItem(allThrowableItemsArr[info[1]], 800, allProjectiles, pawn)
                             else:
-                                game.throwItem(allThrowableItemsArr[info[1]], endTime-startTime, allProjectiles, pawn)
+                                game.throwItem(allThrowableItemsArr[info[1]], shootingEndTime-shootingStartTime, allProjectiles, pawn)
                             isShooting = False
                             hasItem = False
                             canThrow = False
                 
+                #checks if the it is time for the enemies to move again
                 if pygame.time.get_ticks() - lastEnemyMove >= 1000 and pawn.health > 0:
-                    #game.addEnemy(allChessPiecesArr, allEnimiesArr, movement, mapOfPieces, pawn, boardInfo)
-
                     lastEnemyMove = pygame.time.get_ticks()
+
+                    #sorts the enemies from closest to user to the furthest so the front enemies do not block the back ones from moving
                     allChessPiecesArr.sort(key=lambda x: movement.getDistFromPawn(pawn, x))
 
+                    #moving all enemies
                     for enemy in allChessPiecesArr:
                         if enemy is not pawn:
                             movement.moveEnemy(enemy, movement.findEnemyNextMove(pawn, enemy, mapOfPieces), mapOfPieces)
-
-                    allChessPiecesArr.sort(key=boardInfo.getYCord)
                     
+                    #checks if an enemies has moved into attacking distance
                     if not pawn.enemyNear:
                         pawn.enemyNear = movement.checkIfEnemyIsNear((pawn.findChessBoardCordX(), pawn.findChessBoardCordY()), mapOfPieces)
                         if pawn.enemyNear:
                             pawn.enemyNearTimer = pygame.time.get_ticks()
 
-                if pawn.hasImmunity and pygame.time.get_ticks() - pawn.immunityStart >= 2000:
-                    pawn.hasImmunity = False
+
             waveLevel += 1
             print("wave complete")
 
@@ -347,6 +401,6 @@ class GameLoop():
                 canThrow = False
                 isShooting = False
 
+            #deletes all of this rounds corpses
             while len(allThrowableItemsArr) > 16:
                 del allThrowableItemsArr[16]
-
