@@ -302,6 +302,7 @@ class GameLoop():
                     #checks if the player hits the "x" button
                     if event.type == pygame.QUIT:
                         running = False
+                        return
 
                     #checks if the player wants to move the pawn while their health is greater than 0. Also, it moves the item if the player is holding one and updates the map of pieces
                     if event.type == pygame.KEYDOWN and pawn.health > 0:
