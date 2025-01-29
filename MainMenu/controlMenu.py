@@ -1,5 +1,5 @@
 import pygame
-from mainMenu.menuButtons import MenuButtons
+from MainMenu.menuButtons import MenuButtons
 class ControlsMenu:
     def controlsMenu(self, screen):
         backButton = MenuButtons("BACK")

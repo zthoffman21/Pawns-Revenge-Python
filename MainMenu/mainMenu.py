@@ -1,6 +1,6 @@
 import pygame
-from mainMenu.menuButtons import MenuButtons
-from mainMenu.controlMenu import ControlsMenu
+from MainMenu.menuButtons import MenuButtons
+from MainMenu.controlMenu import ControlsMenu
 class MainMenu:
     def checkIfButtonClicked(self, mousePos, buttons):
         mouse = pygame.Rect(mousePos[0], mousePos[1], 1, 1)

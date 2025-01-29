@@ -1,7 +1,7 @@
 # Importing the libraries
 import pygame
-from gameLoop import GameLoop
-from mainMenu.mainMenu import MainMenu
+from GameLoop.gameLoop import GameLoop
+from MainMenu.mainMenu import MainMenu
 
 # Initializing Pygame
 pygame.init()

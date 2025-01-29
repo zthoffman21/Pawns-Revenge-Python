@@ -1,4 +1,4 @@
-from SpriteFiles.ChessPieces.chessPiece import ChessPiece
+from Sprites.ChessPieces.chessPiece import ChessPiece
 import pygame
 pawnTexture = "Textures/Pieces/Pawn.png"
 pawnHitTexture = "Textures/Pieces/PawnHit.png"

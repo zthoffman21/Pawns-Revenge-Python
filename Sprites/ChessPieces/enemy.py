@@ -1,4 +1,4 @@
-from SpriteFiles.ChessPieces.chessPiece import ChessPiece
+from Sprites.ChessPieces.chessPiece import ChessPiece
 import pygame
 import random
 pieces = ["KNIGHT", "BISHOP", "ROOK", "QUEEN", "KING"]

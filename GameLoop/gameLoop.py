@@ -1,14 +1,14 @@
 # Importing the libraries
 import pygame
-from SpriteFiles.items import Items
+from Sprites.items import Items
 import math
 from UsefulFunctions.movement import Movement
-from SpriteFiles.powerBar import PowerBar
-from SpriteFiles.ChessPieces.pawn import Pawn
-from SpriteFiles.ChessPieces.enemy import Enemy
+from Sprites.powerBar import PowerBar
+from Sprites.ChessPieces.pawn import Pawn
+from Sprites.ChessPieces.enemy import Enemy
 from UsefulFunctions.boardInfo import BoardInfo
-from gameLoop.hearts import Hearts
-from gameLoop.roundNumber import RoundNumber
+from GameLoop.hearts import Hearts
+from GameLoop.roundNumber import RoundNumber
 import random
 
 class GameLoop():
